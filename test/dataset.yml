@@ -1,0 +1,5 @@
+path: ./
+train: /home/bgallois/Codes/Codes/FastOcclusion/test/train/images/
+val: /home/bgallois/Codes/Codes/FastOcclusion/test/val/images/
+nc: 2
+names: ['0', '1']
