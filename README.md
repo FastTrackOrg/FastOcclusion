@@ -1,0 +1,2 @@
+# FastOcclusion
+Deep Learning model to solve occlusionThis repository hosts the code for a proof-of-concept (POC) aimed at addressing occlusion challenges in self-similar objects. The project's initial step involves generating simulated occluded images using non-occluded objects. Subsequently, a YOLO segmentation model is trained using these images. The ultimate goal is to apply this trained model to videos where the mentioned self-similar object might undergo occlusion.
