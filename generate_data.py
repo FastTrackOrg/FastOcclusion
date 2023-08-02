@@ -5,10 +5,16 @@ import os
 
 def combine(image):
     image = cv2.resize(image, (600, 600))
-    M = cv2.getRotationMatrix2D((image.shape[1]/2, image.shape[0]/2), np.random.randint(0, 180), 1.0)
-    rotated_0 = cv2.warpAffine(image, M, (image.shape[1], image.shape[0]), borderMode=cv2.BORDER_REPLICATE)
-    M = cv2.getRotationMatrix2D((image.shape[1]/2, image.shape[0]/2), np.random.randint(180, 360), 1.0)
-    rotated_1 = cv2.warpAffine(image, M, (image.shape[1], image.shape[0]), borderMode=cv2.BORDER_REPLICATE)
+    M = cv2.getRotationMatrix2D((image.shape[1]/2, image.shape[0]/2), np.random.randint(0, 360), 1.0)
+    M = np.vstack([M, [0, 0, 1]])
+    Mt = np.float64([[1, 0, np.random.randint(-150, 150)], [0, 1, np.random.randint(-150, 150)], [0, 0, 1]])
+    M = Mt@M
+    rotated_0 = cv2.warpAffine(image, M[:2, :], (image.shape[1], image.shape[0]), borderMode=cv2.BORDER_REPLICATE)
+    M = cv2.getRotationMatrix2D((image.shape[1]/2, image.shape[0]/2), np.random.randint(0, 360), 1.0)
+    M = np.vstack([M, [0, 0, 1]])
+    Mt = np.float64([[1, 0, np.random.randint(-150, 150)], [0, 1, np.random.randint(-150, 150)], [0, 0, 1]])
+    M = Mt@M
+    rotated_1 = cv2.warpAffine(image, M[:2, :], (image.shape[1], image.shape[0]), borderMode=cv2.BORDER_REPLICATE)
 
     mask_top = 1*(rotated_1[:,:,3]> 200)
     mask_bottom = 1*(rotated_0[:,:,3] > 200)
@@ -59,4 +65,4 @@ def create_data(number):
             with open("test/val/labels/{:06d}.txt".format(i), "w") as f:
                 f.write(top)
                 f.write(bottom)
-create_data(5000)
+create_data(1000)
