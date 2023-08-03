@@ -1,4 +1,4 @@
-path: /home/bgallois/Codes/Codes/FastOcclusion/test/
+path: /home/bgallois/Codes/Codes/FastOcclusion/src/test/
 train: train/images/
 val: val/images/
 test: test/images/

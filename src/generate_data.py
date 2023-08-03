@@ -4,7 +4,7 @@ import os
 
 
 def combine(image):
-    image = cv2.resize(image, (600, 600))
+    image = cv2.resize(image, (608, 608))
 
     is_occluded = False
     while not is_occluded:
@@ -26,8 +26,7 @@ def combine(image):
 
     blend = (1-(mask_top[:, :, np.newaxis]))*rotated_0[:,:,:3] + mask_top[:, :, np.newaxis]*rotated_1[:,:,:3]
     blur = np.random.randint(1,7)
-    blur = 2*blur + 1
-    blend = cv2.GaussianBlur(np.uint8(blend),(blur, blur),0)
+    blend = cv2.GaussianBlur(np.uint8(blend),(9, 9),0)
     return blend, mask_top, mask_bottom
 
 def detect_contours(image):
@@ -61,9 +60,9 @@ def create_data(number):
     create_dataset("test")
     for i in range(number):
         if i < 0.90*number:
-            image = cv2.imread("test_{}.png".format(np.random.randint(0,4)), cv2.IMREAD_UNCHANGED) # Read the object with transparency
+            image = cv2.imread("test_{}.png".format(np.random.randint(0,6)), cv2.IMREAD_UNCHANGED) # Read the object with transparency
         else:
-            image = cv2.imread("test_4.png", cv2.IMREAD_UNCHANGED) # Read the object with transparency
+            image = cv2.imread("test_6.png", cv2.IMREAD_UNCHANGED) # Read the object with transparency
         blended, mask_top, mask_bottom = combine(image)
         top = format_yolo(detect_contours(mask_top), 0, mask_top.shape[1], mask_top.shape[0])
         bottom = format_yolo(detect_contours(mask_bottom), 1, mask_top.shape[1], mask_top.shape[0])
@@ -82,4 +81,4 @@ def create_data(number):
             with open("test/test/labels/{:06d}.txt".format(i), "w") as f:
                 f.write(top)
                 f.write(bottom)
-create_data(1500)
+create_data(3000)
