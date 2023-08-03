@@ -25,7 +25,9 @@ def combine(image):
         mask_bottom = np.clip(mask_bottom - mask_top, 0, 1)
 
     blend = (1-(mask_top[:, :, np.newaxis]))*rotated_0[:,:,:3] + mask_top[:, :, np.newaxis]*rotated_1[:,:,:3]
-    blend = cv2.GaussianBlur(np.uint8(blend),(9,9),0)
+    blur = np.random.randint(1,7)
+    blur = 2*blur + 1
+    blend = cv2.GaussianBlur(np.uint8(blend),(blur, blur),0)
     return blend, mask_top, mask_bottom
 
 def detect_contours(image):
@@ -80,4 +82,4 @@ def create_data(number):
             with open("test/test/labels/{:06d}.txt".format(i), "w") as f:
                 f.write(top)
                 f.write(bottom)
-create_data(4000)
+create_data(1500)

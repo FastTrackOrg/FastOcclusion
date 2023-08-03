@@ -1,27 +1,48 @@
-# FastOcclusion
-# FastOcclusion
+## Abstract
+Deep learning techniques have been extensively explored for object tracking, addressing the challenging issue of occlusion. Occlusion arises when one object is obscured by another, often complicated when dealing with similar objects. Scientific tracking scenarios, such as monitoring animal behavior or particle movement, have seen successful methods, though these typically require complex model construction. We present an innovative approach that adapts well-maintained, easily deployable models like YOLO to mitigate occlusion-related challenges. We enable rapid model generation on modest hardware by training YOLOv8 on synthetic data. Results demonstrate strong performance and generalization, showcasing the efficacy of this streamlined strategy in solving occlusion problems for tracking.
 
 ## Introduction
-Welcome to the FastOcclusion project! This repository contains the code for a proof-of-concept (POC) designed to tackle occlusion challenges within self-similar objects using deep learning models. The project's primary objective is to address the issue of occlusion by employing a two-step approach. Initially, the project involves generating simulated occluded images utilizing non-occluded objects. Subsequently, a YOLO segmentation model is trained on these synthetic images. The ultimate ambition is to deploy this trained model to videos where self-similar objects are susceptible to occlusion.
+Numerous tools have been documented in the existing literature for the application of deep learning techniques in the field of object tracking. One particularly significant challenge deep learning can address is mitigating occlusion-related issues. Occlusion arises when one object is partially obscured by another, and the complexity deepens when these objects are self-similar. Several approaches have demonstrated success when focusing on the context of scientific tracking [Gelencsér-Horváth, Anna, et al. "Tracking Highly Similar Rat Instances under Heavy Occlusions: An Unsupervised Deep Generative Pipeline." Journal of Imaging 8.4 (2022): 109.], such as monitoring animal behavior or particle movement. However, these methods typically involve constructing models from the ground up. This process proves to be intricate, especially when considering its integration into experimental settings involving researchers who may not possess an in-depth proficiency in domains like deep learning or computer hardware.
 
-## Generate Dataset
-To begin, execute the following command in your terminal:
-```bash
-python generate_dataset.py
-```
+This research showcases a novel strategy: adapting pre-existing, extensively utilized models that are well-maintained, easily deployable, and require minimal expertise to set up and operate. To address occlusion-related challenges, we harness the power of the YOLO algorithm conventionally employed for instance-segmentation tasks. Our approach involves training the YOLO model on synthetic data, which can be generated quickly. This methodology offers the advantage of being executable on moderately equipped personal computers or even through platforms like Google Colab, enabling the training and utilization of a model in under an hour.
 
-The dataset is derived from the `test_*.png` images, each image featuring a single object. These objects undergo rotations and translations to replicate occlusion scenarios. The pixel-wise annotations are generated based on the object's region within the occluded image. Notably, the occlusions are limited to instances where an object occludes itself, as the detector's purpose is to address occlusions rather than functioning as a conventional object detector.
+## Methods
 
-![labeling example](./labeling.jpg "Training data")
+### Image generation
+The first step of this study is to generate synthetic data for training the YOLO detector. To create this data, we begin with an image of an object on a transparent background. Random translations and rotations are applied to the object to produce the lower image. This process is repeated for the same object to obtain the upper image. By superimposing these two images, we generate an occlusion.
 
-The dataset is divided into three main partitions:
-- **Train and Validate**: This segment is utilized for the training process. Constructed using fish images.
-- **Unseen Test Images**: These images comprise objects and scenarios that were not encountered during the model's training phase, ensuring a robust assessment of its capabilities. Constructed using rat images
+In the resulting image, pixels corresponding to the upper object are identified where the transparency of the upper image is not equal to 0:
+$M_{top} = \alpha_{top}$
 
-## Training
-Initiate the training process by executing the following command:
-```bash
-python train.py
-```
+Pixels corresponding to the lower object are identified where the transparency of the lower image differs from the transparency of the upper image:
+$M_{bottom} = \alpha_{bottom} - \alpha_{top}$
 
-The training procedure utilizes the train and validate dataset in conjunction with the YOLOv8 nano model. Once training concludes, the model's performance is evaluated on the test dataset, gauging its efficacy on entirely new and unseen objects.
+Next, we merge the two images using the following formula:
+$I_{merged} = (1 - M_{bottom}) \cdot I_{top} + M_{top} \cdot I_{top}$
+
+Subsequently, the merged image is subjected to a Gaussian filter to blur the edges and simulate an accurate occlusion more closely.
+
+This method allows for 360 possible rotations and a translation range of 300 pixels in both vertical and horizontal directions, enabling us to generate approximately $8 \times 10^{10}$ unique combinations.
+
+The dataset is divided into three parts: training and validation sets for the model training and a test set for model evaluation. While multiple objects are used to create the training and validation dataset, the test dataset is constructed using an object that the model has not seen before, serving as a measure of the model's generalization capability.
+In practice, it's possible to train on only one object and apply the model to the same object, resulting in high performance for occlusion solving with that specific object but with limited generalization to other objects.
+
+In this article, we constructed the training and validation datasets using images of three distinct fish species, while the test dataset was assembled using a picture of a rat.
+
+### Annotation generation
+The annotations can be generated by detecting the object contours on the top and bottom masks. The annotations need to be formatted following the convention: 'object_id x1 y1 x2 y2 ...' with the coordinates of a polygon outlining the object. The top object will always have only one polygon as it is not occluded. The bottom object can have several polygons, and we choose to retain only the three largest polygons. Ultimately, an annotation for one image will consist of one line for the top object and a maximum of three lines for the bottom object.
+
+### Training
+The model is then trained using the YOLOv8 nano model. YOLOv8 is easy to install and use and is regularly maintained and updated by Ultralytics. We trained the model without additional data augmentation, as the images provided always consist of only two objects. We used 200 epochs with a batch size of 8 images and default parameters. The training was conducted using an NVidia RTX 3050 and completed in less than 30 minutes. For individuals without access to a GPU, it is possible to use Google Colab in conjunction with Google Drive for training the model (see Appendix).
+
+![figure 1](paper/figure_1.png)
+
+## Results
+To evaluate the performance of the instance-segmentation model, the COCO mean average precision (mAP) is employed. This metric takes into consideration both the object class and its segmentation, as detailed at https://cocodataset.org/#detection-eval.
+
+Initially, Figure 2a presents the mAPs for the validation dataset, which corresponds to the validation process conducted during training on a dataset comprised of the same object as the training set. These mAPs are plotted against the training epochs. The convergence towards a commendable mAP indicates the model's relatively strong performance. Figure 2b provides further insight into the model's capabilities by depicting the masks predicted by the model on the validation dataset.
+
+In Figure 3a, the mAPs for the test set are depicted. This evaluation is performed on a test dataset containing objects that were not encountered during the training phase. Despite this novelty, the mAP remains impressive. Figure 3c visually confirms the accuracy of the predicted masks. These findings underscore the model's proficiency in generalizing well, even with a limited dataset containing only three distinct objects.
+
+## Discussion
+We have demonstrated the successful repurposing of an instance-segmentation model to address the occlusion problem by generating synthetic data and training the model with two classes. In this article, we utilize a limited quantity of images (1125 for training, 150 for validation, and 50 for testing) involving only three object types, yet we achieve favorable performance and notable generalization. Within the context of occlusion-solving for tracking, these achieved performances are considered acceptable. Furthermore, due to the streamlined workflow, achieving top-tier performance is attainable through model retraining with a larger image corpus or enhancing specificity by training with only one object type.
