@@ -19,14 +19,21 @@ def combine(image):
         M = Mt@M
         rotated_1 = cv2.warpAffine(image, M[:2, :], (image.shape[1], image.shape[0]), borderMode=cv2.BORDER_REPLICATE)
 
-        mask_top = 1*(rotated_1[:,:,3]> 200)
-        mask_bottom = 1*(rotated_0[:,:,3] > 200)
+        mask_top = 1*(rotated_1[:,:,3]> 100)
+        mask_bottom = 1*(rotated_0[:,:,3] > 100)
         is_occluded = np.max(mask_top+mask_bottom) > 1
         mask_bottom = np.clip(mask_bottom - mask_top, 0, 1)
 
-    blend = (1-(mask_top[:, :, np.newaxis]))*rotated_0[:,:,:3] + mask_top[:, :, np.newaxis]*rotated_1[:,:,:3]
-    blur = np.random.randint(1,7)
-    blend = cv2.GaussianBlur(np.uint8(blend),(9, 9),0)
+    alpha_top = np.copy(np.float32(mask_top))
+    alpha_top = cv2.GaussianBlur(alpha_top,(5, 5),0)
+    alpha_top = alpha_top[:, :, np.newaxis]
+
+    alpha_bottom = np.copy(np.float32((1-alpha_top)*mask_bottom[:, :, np.newaxis]))
+    alpha_bottom = cv2.GaussianBlur(alpha_bottom,(5, 5),0)
+    alpha_bottom = alpha_bottom[:, :, np.newaxis]
+
+    blend = np.ones_like(rotated_0[:,:,:3])*255*(1-alpha_bottom)*(1-alpha_top) + alpha_bottom*rotated_0[:,:,:3] + alpha_top*rotated_1[:,:,:3]
+    blend = cv2.GaussianBlur(np.uint8(blend),(15, 15),0)
     return blend, mask_top, mask_bottom
 
 def detect_contours(image):
@@ -59,10 +66,11 @@ def create_dataset(folder):
 def create_data(number):
     create_dataset("test")
     for i in range(number):
-        if i < 0.90*number:
+        '''if i < 0.90*number:
             image = cv2.imread("test_{}.png".format(np.random.randint(0,6)), cv2.IMREAD_UNCHANGED) # Read the object with transparency
         else:
-            image = cv2.imread("test_6.png", cv2.IMREAD_UNCHANGED) # Read the object with transparency
+            image = cv2.imread("test_6.png", cv2.IMREAD_UNCHANGED) # Read the object with transparency'''
+        image = cv2.imread("MIC_001.png", cv2.IMREAD_UNCHANGED)
         blended, mask_top, mask_bottom = combine(image)
         top = format_yolo(detect_contours(mask_top), 0, mask_top.shape[1], mask_top.shape[0])
         bottom = format_yolo(detect_contours(mask_bottom), 1, mask_top.shape[1], mask_top.shape[0])
@@ -81,4 +89,4 @@ def create_data(number):
             with open("test/test/labels/{:06d}.txt".format(i), "w") as f:
                 f.write(top)
                 f.write(bottom)
-create_data(3000)
+create_data(10000)
